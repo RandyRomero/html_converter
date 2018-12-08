@@ -3,13 +3,17 @@
 import aiohttp
 import asyncio
 
+
 async def fetch(session, url):
-	async with session.get(url) as response:
+	payload = '<h1>I am your HTML<h1>'
+	async with session.post(url, data=payload) as response:
+
 		return await response.text()
+
 
 async def main():
 	async with aiohttp.ClientSession() as session:
-		html = await fetch(session, 'http://localhost:8080/hello/Mustafa')
+		html = await fetch(session, 'http://localhost:8080/generate')
 		print(html)
 
 loop = asyncio.get_event_loop()

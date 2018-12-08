@@ -3,7 +3,8 @@
 from aiohttp import web
 
 async def generate(request):
-	pass
+	text = await request.text()
+	return web.Response(text=text)
 
 
 async def hello(request):
