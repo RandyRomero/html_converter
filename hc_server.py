@@ -11,28 +11,30 @@ logger = get_logger(__name__)
 
 async def get_pdf(md5):
     async with aiohttp.ClientSession() as session:
-        # url = f'http://172.17.0.2:8080/convert?auth=arachnys-weaver&url=http://127.0.0.1:8181/raw/{md5}'
         url = f'http://127.0.0.1:8080/convert?auth=arachnys-weaver&url=http://127.0.0.1:8181/raw/{md5}'
-        # url = 'http://127.0.0.1:8080/convert?auth=arachnys-weaver&url=https://blog.arachnys.com/1/google-isnt-even-close-to-proper-due-diligence.-why-not?utm_campaign=athena&utm_medium=external%20website&utm_source=github&utm_content=readme'
-        # url = 'http://127.0.0.1:8080/convert?auth=arachnys-weaver&url=http://docs.aiohttp.org/en/stable/client_advanced.html'
-        logger.debug('Trying to connect to arachnysdocker with url: %s', url)
+        logger.debug('Trying to connect to Athenapdf with url: %s', url)
 
         async with session.get(url) as response:
             if response.status == 200:
-                logger.debug('Got the pdf file')
+                logger.debug('Got the pdf file from Athenapdf')
                 raw_pdf = await response.content.read()
                 return raw_pdf
 
-            # todo handle a situation when status is not 200
+            else:
+                logger.error('Athenapdf converter responded with status code: %d\nMessage: %s',
+                             response.status, await response.text())
+                return 1
 
 
 async def get_raw_html(request):
     logger.debug('Got request to return html by its md5...')
+
+    # Getting md5 key from the request
     md5 = request.match_info.get('md5', None)
 
-    html = request.app['htmls'][md5]
+    html = request.app['htmls'].get(md5, None)
     if not html:
-        logger.debug('There is no entry for your md5 key.')
+        logger.error('There is no entry for your md5 key.')
         return web.Response(text='There is no data for this key', status=404)
 
     logger.debug('Returning queried html as a string...')
@@ -51,13 +53,14 @@ async def generate(request):
     request.app['htmls'][md5] = text
 
     pdf_raw_file = await get_pdf(md5)
+    if pdf_raw_file == 1:
+        return web.Response(text="Athenapdf converter can't handle this request right now", status=404)
 
     del request.app['htmls'][md5]
     assert request.app['htmls'].get(md5, None) == None, "The html string haven't been removed!"
 
     logger.debug('Returning pdf to the user...')
-    response = web.Response(body=pdf_raw_file, status=200, content_type='application/pdf')
-    return response
+    return web.Response(body=pdf_raw_file, status=200, content_type='application/pdf')
 
 
 def main():

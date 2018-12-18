@@ -25,7 +25,6 @@ async def convert_html_to_pdf(session, url, data):
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        # data = 'https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04'
 
         url = 'http://docs.aiohttp.org/en/stable/client_advanced.html'
         async with session.get(url) as response:
