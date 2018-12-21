@@ -30,7 +30,6 @@ async def main():
         async with session.get(url) as response:
             if response.status == 200:
                 file = await response.read()
-                # headers = {'content-type': 'application/html'}
                 await convert_html_to_pdf(session, 'http://localhost:8181/generate', data=file)
             else:
                 print(f'Server returned {response.status} status code')
