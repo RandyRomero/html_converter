@@ -1,14 +1,19 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
+
+"""
+Not a real test file for some test framework, just a simple aiohttp client to check main application with.
+"""
 
 import aiohttp
 import asyncio
-import aiofiles
+import aiofiles #type: ignore
 import sys
 import os
 from aiohttp.client import ClientSession
 
-# Perhaps there is a better way to import a script from a parent directory
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Perhaps there is a better way to import a script from another directory
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'html_converter'))
+
 from set_up_logging import get_logger
 
 logger = get_logger(__name__)
@@ -38,7 +43,7 @@ async def convert_html_to_pdf(session: ClientSession, url: str, data: bytes) -> 
 
 async def main() -> None:
     """
-    Function that performs some test tasks for hc_server.py
+    Function that performs some test tasks for main.py
     :return: None
     """
 
