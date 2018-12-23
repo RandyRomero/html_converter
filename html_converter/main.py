@@ -4,8 +4,8 @@
 hc_server
 
 Usage:
-hc_server.py  [-h | --help]
-hc_server.py  [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
+main.py  [-h | --help]
+main.py  [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
 
 
 Options:
