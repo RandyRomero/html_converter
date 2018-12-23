@@ -3,16 +3,29 @@
 import aiohttp
 import asyncio
 import aiofiles
+import sys
+import os
+from aiohttp.client import ClientSession
 
+# Perhaps there is a better way to import a script from a parent directory
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from set_up_logging import get_logger
 
-async def get_md5(session, url):
-    async with session.get(url) as response:
-        return await response.text()
+logger = get_logger(__name__)
 
+async def convert_html_to_pdf(session: ClientSession, url: str, data: bytes) -> None:
+    """
+    Tests ability of server to serve its main and sole purpose: receive an html file and return
+    its pdf version back
 
-async def convert_html_to_pdf(session, url, data):
+    :param session: session object of aiohttp
+    :param url: address of the server which is being tested
+    :param data: an html file as bytes
+    :return: None
+    """
+
     async with session.post(url, data=data) as response:
-        print(response.status)
+        logger.debug(f'status code: {response.status}')
         if response.status == 200:
             async with aiofiles.open('file.pdf', 'wb') as file:
                 while True:
@@ -20,24 +33,24 @@ async def convert_html_to_pdf(session, url, data):
                     if not chunk:
                         break
                     await file.write(chunk)
-        return await response.release()
+        else:
+            print(await response.text())
 
+async def main() -> None:
+    """
+    Function that performs some test tasks for hc_server.py
+    :return: None
+    """
 
-async def main():
     async with aiohttp.ClientSession() as session:
-
-        url = 'http://docs.aiohttp.org/en/stable/client_advanced.html'
+        # url = 'http://docs.aiohttp.org/en/stable/client_advanced.html'
+        url = 'https://www.ferra.ru/'
         async with session.get(url) as response:
             if response.status == 200:
                 file = await response.read()
                 await convert_html_to_pdf(session, 'http://localhost:8181/generate', data=file)
             else:
                 print(f'Server returned {response.status} status code')
-
-
-        # test that server can return html by md5 key
-        # response = await get_md5(session, 'http://localhost:8181/raw/44c8ce76fb92401953f0b122182929ab')
-
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())

@@ -22,40 +22,60 @@ import aiohttp
 from aiohttp import web
 import hashlib
 from set_up_logging import get_logger
-from docopt import docopt
+from docopt import docopt # type: ignore
+
+from typing import Union, Dict, Tuple
+from aiohttp.web_request import Request
+from aiohttp.web_response import Response
 
 
 logger = get_logger(__name__)
 
 
-async def get_pdf(md5, addresses):
+async def get_pdf(md5: str, addresses: Dict[str, str]) -> Union[Tuple[int, bytes], Tuple[int, str]]:
+    """
+    Connects to Athenapdf microservice in order to get pdf file from a given html file
+    and returns it back to a client
+
+    :param md5: key for getting html file from this app
+    :param addresses: dictionary with html files stored by theirs md5
+    :return: either pdf file as bytes or 1 in case Athenapdf can't return pdf file
+    """
+
+    url = (f"http://{addresses['a_host']}:{addresses['a_port']}/convert?auth=arachnys-"
+           f"weaver&url=http://{addresses['s_host']}:{addresses['s_port']}/raw/{md5}")
+
     async with aiohttp.ClientSession() as session:
-        server_host = addresses['s_host']
-        server_port = addresses['s_port']
-        athenapdf_host = addresses['a_host']
-        athenapdf_port = addresses['a_port']
-
-        url = (f'http://{server_host}:{server_port}/convert?auth=arachnys-'
-               f'weaver&url=http://{athenapdf_host}:{athenapdf_port}/raw/{md5}')
-
         logger.debug('Trying to connect to Athenapdf with url: %s', url)
-        async with session.get(url) as response:
-            if response.status == 200:
+        try:
+            async with session.get(url) as response:
+                response.raise_for_status()
                 logger.debug('Got the pdf file from Athenapdf')
                 raw_pdf = await response.content.read()
-                return raw_pdf
-            else:
-                logger.error('Athenapdf converter responded with status code: %d\nMessage: %s',
-                             response.status, await response.text())
-                return 1
+                return 0, raw_pdf
+
+        except aiohttp.ClientResponseError as e:
+            logger.error(e)
+            return 1, str(e)
+
+        except aiohttp.client_exceptions.ClientConnectorError as e:
+            logger.error("Can't connect to Athenapdf converter. Reason: %s", e)
+            return 1, str(e)
 
 
-async def get_raw_html(request):
+async def get_raw_html(request: Request) -> Response:
+    """
+    Getting stored html file from instance of this app by its md5 key
+    :param request: request of the client which we need to get access to instance of this app
+    :return: web.Response either with a corresponding html file or with error message
+    """
+
     logger.debug('Got request to return html by its md5...')
 
     # Getting md5 key from the request
     md5 = request.match_info.get('md5', None)
 
+    # Getting html file from instance of this app by md5 key
     html = request.app['htmls'].get(md5, None)
     if not html:
         logger.error('There is no entry for your md5 key.')
@@ -65,29 +85,43 @@ async def get_raw_html(request):
     return web.Response(body=html, content_type='text/html')
 
 
-async def generate(request):
+async def generate(request: Request) -> Response:
+    """
+    The function accepts html file as a text, generates its md5 hash and store file and its hash
+    in the application context, calls another function to get pdf file from html, and returns back
+
+    :param request: request object with html file to be processed
+    :return: web.Response object with either pdf file as bytes or with error message
+    """
+
     logger.debug('Got request to generate pdf...')
+
+    # Getting client's html file as a string
     text = await request.text()
 
-    logger.debug('Getting md5 from a given html...')
+    logger.debug('Evaluating md5 from a given html...')
     md5 = hashlib.md5(text.encode('utf-8')).hexdigest()
 
-    # store html by its md5
     logger.debug('Saving the html in app by its md5...')
     request.app['htmls'][md5] = text
 
-    pdf_raw_file = await get_pdf(md5, request.app['addresses'])
-    if pdf_raw_file == 1:
-        return web.Response(text="Athenapdf converter can't handle this request right now", status=404)
+    response = await get_pdf(md5, request.app['addresses'])
+    if response[0] == 1:
+        return web.Response(text=response[1], status=500)
 
     del request.app['htmls'][md5]
-    assert request.app['htmls'].get(md5, None) == None, "The html string haven't been removed!"
 
     logger.debug('Returning pdf to the user...')
-    return web.Response(body=pdf_raw_file, status=200, content_type='application/pdf')
+    return web.Response(body=response[1], status=200, content_type='application/pdf')
 
 
-def main():
+def main() -> None:
+    """
+    Parsing command line arguments, creating app instance, store ports and hosts in the application context
+    to be used later, register views, run app
+
+    :return: None
+    """
     print('Server initializing...')
 
     # parsing command line arguments
