@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*- 
 
 """
-hc_server
+html_converter
 
 Usage:
 main.py  [-h | --help]
