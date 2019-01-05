@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*- 
-
 """
 html_converter
 
 Usage:
 main.py  [-h | --help]
 main.py  [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
-
 
 Options:
 -h  --help                  Show this screen
@@ -17,17 +14,16 @@ Options:
 
 """
 
-
 import aiohttp
 from aiohttp import web
 import hashlib
-from set_up_logging import get_logger
-from docopt import docopt # type: ignore
-
 from typing import Union, Dict, Tuple
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response
 
+from docopt import docopt # type: ignore
+
+from set_up_logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -122,7 +118,7 @@ def main() -> None:
 
     :return: None
     """
-    print('Server initializing...')
+    logger.info('Server initializing...')
 
     # parsing command line arguments
     arguments = docopt(__doc__)
