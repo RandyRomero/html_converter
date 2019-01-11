@@ -2,22 +2,22 @@
 html_converter
 
 Usage:
-main.py  [-h | --help]
-main.py  [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
+main.py [-h | --help]
+main.py [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
 
 Options:
 -h  --help                  Show this screen
---server-host=<s_host>   Specify host for this app [default: 127.0.0.1].
---server-port=<s_port>   Specify port for this app [default: 8181]
---athenapdf-host=<a_host>   Specify host where this app will be looking for Athenapdf [default: 127.0.0.1]
---athenapdf-port=<a_port>   Specify port where this app will be looking for Athenapdf [default: 8080]
+--server-host=<s_host>  Specify host for this app [default: 127.0.0.1]
+--server-port=<s_port>  Specify port for this app [default: 8181]
+--athenapdf-host=<a_host>  Specify host where this app will be looking for Athenapdf [default: 127.0.0.1]
+--athenapdf-port=<a_port>  Specify port where this app will be looking for Athenapdf [default: 8080]
 
 """
 
 import aiohttp
 from aiohttp import web
 import hashlib
-from typing import Union, Dict, Tuple
+from typing import Dict
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response
 
@@ -28,7 +28,7 @@ from set_up_logging import get_logger
 logger = get_logger(__name__)
 
 
-async def get_pdf(md5: str, addresses: Dict[str, str]) -> Union[Tuple[int, bytes], Tuple[int, str]]:
+async def get_pdf(md5: str, addresses: Dict[str, str]) -> bytes:
     """
     Connects to Athenapdf microservice in order to get pdf file from a given html file
     and returns it back to a client
@@ -43,20 +43,11 @@ async def get_pdf(md5: str, addresses: Dict[str, str]) -> Union[Tuple[int, bytes
 
     async with aiohttp.ClientSession() as session:
         logger.debug('Trying to connect to Athenapdf with url: %s', url)
-        try:
-            async with session.get(url) as response:
-                response.raise_for_status()
-                logger.debug('Got the pdf file from Athenapdf')
-                raw_pdf = await response.content.read()
-                return 0, raw_pdf
-
-        except aiohttp.ClientResponseError as e:
-            logger.error(e)
-            return 1, str(e)
-
-        except aiohttp.client_exceptions.ClientConnectorError as e:
-            logger.error("Can't connect to Athenapdf converter. Reason: %s", e)
-            return 1, str(e)
+        async with session.get(url) as response:
+            response.raise_for_status()
+            logger.debug('Got the pdf file from Athenapdf')
+            raw_pdf = await response.content.read()
+            return raw_pdf
 
 
 async def get_raw_html(request: Request) -> Response:
@@ -101,14 +92,24 @@ async def generate(request: Request) -> Response:
     logger.debug('Saving the html in app by its md5...')
     request.app['htmls'][md5] = text
 
-    response = await get_pdf(md5, request.app['addresses'])
-    if response[0] == 1:
-        return web.Response(text=response[1], status=500)
+    try:
+        response = await get_pdf(md5, request.app['addresses'])
+
+    except aiohttp.ClientResponseError as e:
+        error_message = f"Athenapdf returned an error ({e})"
+        logger.error(error_message)
+        return web.Response(text=error_message, status=500)
+
+    except aiohttp.client_exceptions.ClientConnectorError as e:
+        error_message = (f"The app cannot connect to the Athenapdf, " 
+            f"check whether it's alive and on the right host and port. Reason: {e}")
+        logger.error(error_message)
+        return web.Response(text=error_message, status=500)
 
     del request.app['htmls'][md5]
 
     logger.debug('Returning pdf to the user...')
-    return web.Response(body=response[1], status=200, content_type='application/pdf')
+    return web.Response(body=response, status=200, content_type='application/pdf')
 
 
 def main() -> None:
