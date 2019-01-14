@@ -43,7 +43,7 @@ async def convert_html_to_pdf(session: ClientSession, url: str, data: bytes) -> 
 
 async def main() -> None:
     """
-    Function that performs some test tasks for main.py
+    Function that performs some test tasks for __main__.py
     :return: None
     """
 

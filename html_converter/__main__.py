@@ -2,8 +2,8 @@
 html_converter
 
 Usage:
-main.py [-h | --help]
-main.py [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
+__main__.py [-h | --help]
+__main__.py [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
 
 Options:
 -h  --help                  Show this screen
@@ -23,7 +23,7 @@ from aiohttp.web_response import Response
 
 from docopt import docopt # type: ignore
 
-from set_up_logging import get_logger
+from html_converter.set_up_logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -137,6 +137,7 @@ def main() -> None:
     app.router.add_get('/raw/{md5}', get_raw_html)
     app.router.add_post('/generate', generate)
 
+    #TODO catch error if the address is already in use
     web.run_app(app, host=arguments['--server-host'], port=arguments['--server-port'])
 
 
