@@ -2,8 +2,8 @@
 html_converter
 
 Usage:
-__main__.py [-h | --help]
-__main__.py [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
+html_converter [-h | --help]
+html_converter [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
 
 Options:
 -h  --help                  Show this screen
