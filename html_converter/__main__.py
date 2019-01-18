@@ -17,7 +17,7 @@ Options:
 import aiohttp
 from aiohttp import web
 import hashlib
-from typing import Dict
+from typing import NamedTuple
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response
 
@@ -27,8 +27,15 @@ from html_converter.set_up_logging import get_logger
 
 logger = get_logger(__name__)
 
+# namedtuple to store command line arguments
+class Commands(NamedTuple):
+    name: str
+    s_host: str
+    s_port: str
+    a_host: str
+    a_port: str
 
-async def get_pdf(md5: str, addresses: Dict[str, str]) -> bytes:
+async def get_pdf(md5: str, addresses: Commands) -> bytes:
     """
     Connects to Athenapdf microservice in order to get pdf file from a given html file
     and returns it back to a client
@@ -38,8 +45,8 @@ async def get_pdf(md5: str, addresses: Dict[str, str]) -> bytes:
     :return: either pdf file as bytes or 1 in case Athenapdf can't return pdf file
     """
 
-    url = (f"http://{addresses['a_host']}:{addresses['a_port']}/convert?auth=arachnys-"
-           f"weaver&url=http://{addresses['s_host']}:{addresses['s_port']}/raw/{md5}")
+    url = (f"http://{addresses.a_host}:{addresses.a_port}/convert?auth=arachnys-"
+           f"weaver&url=http://{addresses.s_host}:{addresses.s_port}/raw/{md5}")
 
     async with aiohttp.ClientSession() as session:
         logger.debug('Trying to connect to Athenapdf with url: %s', url)
@@ -114,7 +121,8 @@ async def generate(request: Request) -> Response:
 
 def main() -> None:
     """
-    Parsing command line arguments, creating app instance, store ports and hosts in the application context
+    Parsing command line arguments, creating app instance, store ports and
+    hosts in the application context
     to be used later, register views, run app
 
     :return: None
@@ -126,20 +134,23 @@ def main() -> None:
 
     app = web.Application()
 
-    # make storage that is available for the whole app for storing html files by theirs md5 keys
+    # make storage that is available for the whole app for storing html files
+    # by theirs md5 keys
     app['htmls'] = {}
 
-    app['addresses'] = {'s_host': arguments['--server-host'],
-                        's_port': arguments['--server-port'],
-                        'a_host': arguments['--athenapdf-host'],
-                        'a_port': arguments['--athenapdf-port']}
+    commands = Commands('commands',
+                        s_host=arguments['--server-host'],
+                        s_port=arguments['--server-port'],
+                        a_host=arguments['--athenapdf-host'],
+                        a_port=arguments['--athenapdf-port']
+                        )
+
+    app['addresses'] = commands
 
     app.router.add_get('/raw/{md5}', get_raw_html)
     app.router.add_post('/generate', generate)
 
-    #TODO catch error if the address is already in use
     web.run_app(app, host=arguments['--server-host'], port=arguments['--server-port'])
-
 
 if __name__ == '__main__':
     main()

@@ -3,3 +3,4 @@ hello_world/
 .mypy_cache/
 tests/file.pdf
 __pycache__/
+*.pyc
