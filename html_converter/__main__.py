@@ -3,14 +3,17 @@ html_converter
 
 Usage:
 html_converter [-h | --help]
-html_converter [--server-host=<s_host>] [--server-port=<s_port>] [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
+html_converter [--server-host=<s_host>] [--server-port=<s_port>]
+               [--athenapdf-host=<a_host>] [--athenapdf-port=<a_port>]
 
 Options:
 -h  --help                  Show this screen
 --server-host=<s_host>  Specify host for this app [default: 127.0.0.1]
 --server-port=<s_port>  Specify port for this app [default: 8181]
---athenapdf-host=<a_host>  Specify host where this app will be looking for Athenapdf [default: 127.0.0.1]
---athenapdf-port=<a_port>  Specify port where this app will be looking for Athenapdf [default: 8080]
+--athenapdf-host=<a_host>  Specify host where this app will be looking for
+                           Athenapdf [default: 127.0.0.1]
+--athenapdf-port=<a_port>  Specify port where this app will be looking for
+                           Athenapdf [default: 8080]
 
 """
 
@@ -37,16 +40,18 @@ class Commands(NamedTuple):
 
 async def get_pdf(md5: str, addresses: Commands) -> bytes:
     """
-    Connects to Athenapdf microservice in order to get pdf file from a given html file
-    and returns it back to a client
+    Connects to Athenapdf microservice in order to get pdf file from
+    a given html file and returns it back to a client
 
     :param md5: key for getting html file from this app
     :param addresses: dictionary with html files stored by theirs md5
-    :return: either pdf file as bytes or 1 in case Athenapdf can't return pdf file
+    :return: either pdf file as bytes or 1 in case Athenapdf can't
+             return pdf file
     """
 
-    url = (f"http://{addresses.a_host}:{addresses.a_port}/convert?auth=arachnys-"
-           f"weaver&url=http://{addresses.s_host}:{addresses.s_port}/raw/{md5}")
+    url = (f"http://{addresses.a_host}:{addresses.a_port}"
+           "/convert?auth=arachnys-weaver&url=http://"
+           f"{addresses.s_host}:{addresses.s_port}/raw/{md5}")
 
     async with aiohttp.ClientSession() as session:
         logger.debug('Trying to connect to Athenapdf with url: %s', url)
@@ -60,8 +65,10 @@ async def get_pdf(md5: str, addresses: Commands) -> bytes:
 async def get_raw_html(request: Request) -> Response:
     """
     Getting stored html file from instance of this app by its md5 key
-    :param request: request of the client which we need to get access to instance of this app
-    :return: web.Response either with a corresponding html file or with error message
+    :param request: request of the client which we need to get access to
+                    instance of this app
+    :return: web.Response either with a corresponding html file or with
+             error message
     """
 
     logger.debug('Got request to return html by its md5...')
@@ -81,11 +88,13 @@ async def get_raw_html(request: Request) -> Response:
 
 async def generate(request: Request) -> Response:
     """
-    The function accepts html file as a text, generates its md5 hash and store file and its hash
-    in the application context, calls another function to get pdf file from html, and returns back
+    The function accepts html file as a text, generates its md5 hash and store
+    file and its hash in the application context, calls another function to
+    get pdf file from html, and returns back
 
     :param request: request object with html file to be processed
-    :return: web.Response object with either pdf file as bytes or with error message
+    :return: web.Response object with either pdf file as bytes or with error
+             message
     """
 
     logger.debug('Got request to generate pdf...')
@@ -108,15 +117,17 @@ async def generate(request: Request) -> Response:
         return web.Response(text=error_message, status=500)
 
     except aiohttp.client_exceptions.ClientConnectorError as e:
-        error_message = (f"The app cannot connect to the Athenapdf, " 
-            f"check whether it's alive and on the right host and port. Reason: {e}")
+        error_message = ("The app cannot connect to the Athenapdf, "
+                         "check whether it's alive and on the right "
+                         f"host and port. Reason: {e}")
         logger.error(error_message)
         return web.Response(text=error_message, status=500)
 
     del request.app['htmls'][md5]
 
     logger.debug('Returning pdf to the user...')
-    return web.Response(body=response, status=200, content_type='application/pdf')
+    return web.Response(body=response, status=200,
+                        content_type='application/pdf')
 
 
 def main() -> None:
@@ -150,7 +161,8 @@ def main() -> None:
     app.router.add_get('/raw/{md5}', get_raw_html)
     app.router.add_post('/generate', generate)
 
-    web.run_app(app, host=arguments['--server-host'], port=arguments['--server-port'])
+    web.run_app(app, host=arguments['--server-host'],
+                port=arguments['--server-port'])
 
 if __name__ == '__main__':
     main()
