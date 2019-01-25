@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Not a real test file for some test framework, just a simple aiohttp client to check main application with.
+Not a real test file for some test framework, just a simple aiohttp
+client to check main application with.
 """
 
 import aiohttp
@@ -12,15 +13,19 @@ import os
 from aiohttp.client import ClientSession
 
 # Perhaps there is a better way to import a script from another directory
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'html_converter'))
+parent_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(parent_directory, 'html_converter'))
 
 from set_up_logging import get_logger
 
 logger = get_logger(__name__)
 
-async def convert_html_to_pdf(session: ClientSession, url: str, data: bytes) -> None:
+async def convert_html_to_pdf(session: ClientSession,
+                              url: str,
+                              data: bytes) -> None:
     """
-    Tests ability of server to serve its main and sole purpose: receive an html file and return
+    Tests ability of server to serve its main and sole purpose: receive an
+    html file and return
     its pdf version back
 
     :param session: session object of aiohttp
@@ -53,7 +58,9 @@ async def main() -> None:
         async with session.get(url) as response:
             if response.status == 200:
                 file = await response.read()
-                await convert_html_to_pdf(session, 'http://localhost:8181/generate', data=file)
+                await convert_html_to_pdf(session,
+                                          'http://localhost:8181/generate',
+                                          data=file)
             else:
                 print(f'Server returned {response.status} status code')
 
