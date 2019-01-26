@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Not a real test file for some test framework, just a simple aiohttp
 client to check main application with.
@@ -7,7 +5,7 @@ client to check main application with.
 
 import aiohttp
 import asyncio
-import aiofiles #type: ignore
+import aiofiles  # type: ignore
 import sys
 import os
 from aiohttp.client import ClientSession
@@ -20,13 +18,13 @@ from set_up_logging import get_logger
 
 logger = get_logger(__name__)
 
+
 async def convert_html_to_pdf(session: ClientSession,
                               url: str,
                               data: bytes) -> None:
     """
     Tests ability of server to serve its main and sole purpose: receive an
-    html file and return
-    its pdf version back
+    html file and return its pdf version back
 
     :param session: session object of aiohttp
     :param url: address of the server which is being tested
@@ -46,9 +44,10 @@ async def convert_html_to_pdf(session: ClientSession,
         else:
             print(await response.text())
 
+
 async def main() -> None:
     """
-    Function that performs some test tasks for __main__.py
+    Function that download html file as bytes to be send to html converter
     :return: None
     """
 
