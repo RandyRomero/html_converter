@@ -4,3 +4,4 @@ hello_world/
 tests/file.pdf
 __pycache__/
 *.pyc
+html_converter.egg-info/

@@ -19,16 +19,17 @@ Options:
 
 import aiohttp
 from aiohttp import web
-import hashlib
+from uuid import uuid4
 from typing import NamedTuple
 from aiohttp.web_request import Request
 from aiohttp.web_response import Response
 
-from docopt import docopt # type: ignore
+from docopt import docopt  # type: ignore
 
 from html_converter.set_up_logging import get_logger
 
 logger = get_logger(__name__)
+
 
 # namedtuple to store command line arguments
 class Commands(NamedTuple):
@@ -38,20 +39,20 @@ class Commands(NamedTuple):
     a_host: str
     a_port: str
 
-async def get_pdf(md5: str, addresses: Commands) -> bytes:
+
+async def get_pdf(uuid: str, addresses: Commands) -> bytes:
     """
     Connects to Athenapdf microservice in order to get pdf file from
     a given html file and returns it back to a client
 
-    :param md5: key for getting html file from this app
-    :param addresses: dictionary with html files stored by theirs md5
-    :return: either pdf file as bytes or 1 in case Athenapdf can't
-             return pdf file
+    :param uuid: key for getting html file from this app
+    :param addresses: namedtuple with html files stored by uuid
+    :return: pdf file as bytes
     """
 
     url = (f"http://{addresses.a_host}:{addresses.a_port}"
            "/convert?auth=arachnys-weaver&url=http://"
-           f"{addresses.s_host}:{addresses.s_port}/raw/{md5}")
+           f"{addresses.s_host}:{addresses.s_port}/raw/{uuid}")
 
     async with aiohttp.ClientSession() as session:
         logger.debug('Trying to connect to Athenapdf with url: %s', url)
@@ -64,22 +65,22 @@ async def get_pdf(md5: str, addresses: Commands) -> bytes:
 
 async def get_raw_html(request: Request) -> Response:
     """
-    Getting stored html file from instance of this app by its md5 key
+    Getting stored html file from instance of this app by uuid as a key
     :param request: request of the client which we need to get access to
                     instance of this app
     :return: web.Response either with a corresponding html file or with
              error message
     """
 
-    logger.debug('Got request to return html by its md5...')
+    logger.debug('Got request to return html by uuid...')
 
-    # Getting md5 key from the request
-    md5 = request.match_info.get('md5', None)
+    # Getting uuid from the request
+    uuid = request.match_info.get('uuid', None)
 
-    # Getting html file from instance of this app by md5 key
-    html = request.app['htmls'].get(md5, None)
+    # Getting html file from instance of this app by uuid key
+    html = request.app['htmls'].get(uuid, None)
     if not html:
-        logger.error('There is no entry for your md5 key.')
+        logger.error('There is no entry for your uuid key.')
         return web.Response(text='There is no data for this key', status=404)
 
     logger.debug('Returning queried html as a string...')
@@ -88,9 +89,10 @@ async def get_raw_html(request: Request) -> Response:
 
 async def generate(request: Request) -> Response:
     """
-    The function accepts html file as a text, generates its md5 hash and store
-    file and its hash in the application context, calls another function to
-    get pdf file from html, and returns back
+    The function gets html file from a request as a text,
+    generates uuid and store this html file by the uuid in the application
+    context, calls another function to get pdf file from html,
+    and returns the pdf file
 
     :param request: request object with html file to be processed
     :return: web.Response object with either pdf file as bytes or with error
@@ -102,14 +104,12 @@ async def generate(request: Request) -> Response:
     # Getting client's html file as a string
     text = await request.text()
 
-    logger.debug('Evaluating md5 from a given html...')
-    md5 = hashlib.md5(text.encode('utf-8')).hexdigest()
-
-    logger.debug('Saving the html in app by its md5...')
-    request.app['htmls'][md5] = text
+    logger.debug('Saving the html in app by unique uuid...')
+    uuid = str(uuid4())
+    request.app['htmls'][uuid] = text
 
     try:
-        response = await get_pdf(md5, request.app['addresses'])
+        response = await get_pdf(uuid, request.app['addresses'])
 
     except aiohttp.ClientResponseError as e:
         error_message = f"Athenapdf returned an error ({e})"
@@ -123,7 +123,7 @@ async def generate(request: Request) -> Response:
         logger.error(error_message)
         return web.Response(text=error_message, status=500)
 
-    del request.app['htmls'][md5]
+    del request.app['htmls'][uuid]
 
     logger.debug('Returning pdf to the user...')
     return web.Response(body=response, status=200,
@@ -146,9 +146,10 @@ def main() -> None:
     app = web.Application()
 
     # make storage that is available for the whole app for storing html files
-    # by theirs md5 keys
+    # by uuids
     app['htmls'] = {}
 
+    # adding commands to namedtuple
     commands = Commands('commands',
                         s_host=arguments['--server-host'],
                         s_port=arguments['--server-port'],
@@ -158,11 +159,12 @@ def main() -> None:
 
     app['addresses'] = commands
 
-    app.router.add_get('/raw/{md5}', get_raw_html)
+    app.router.add_get('/raw/{uuid}', get_raw_html)
     app.router.add_post('/generate', generate)
 
     web.run_app(app, host=arguments['--server-host'],
                 port=arguments['--server-port'])
+
 
 if __name__ == '__main__':
     main()
